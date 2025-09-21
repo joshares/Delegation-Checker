@@ -1,0 +1,68 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// wagmiConfig.ts
+import { getDefaultConfig } from "@rainbow-me/rainbowkit";
+import {
+  metaMaskWallet,
+  coinbaseWallet,
+  walletConnectWallet,
+  trustWallet,
+  ledgerWallet,
+  injectedWallet,
+  rainbowWallet,
+  phantomWallet,
+  okxWallet,
+  safeWallet,
+  argentWallet,
+  rabbyWallet,
+  safepalWallet,
+  bestWallet,
+  backpackWallet,
+} from "@rainbow-me/rainbowkit/wallets";
+import { http, createStorage, cookieStorage } from "wagmi";
+import { mainnet } from "wagmi/chains";
+
+export const projectId: string = "4bcd318017d900779842494c64137c45"; // Your WalletConnect Cloud project ID
+export const appName: string = "My Web3 App"; // Replace with your app name
+
+export const chains: any = [mainnet];
+
+export const config = getDefaultConfig({
+  appName,
+  projectId,
+  chains,
+  wallets: [
+    {
+      groupName: "Recommended",
+      wallets: [
+        metaMaskWallet,
+        rabbyWallet,
+        trustWallet,
+        safepalWallet,
+        okxWallet,
+        walletConnectWallet,
+        coinbaseWallet,
+      ],
+    },
+    {
+      groupName: "Other Wallets",
+      wallets: [
+        backpackWallet,
+        bestWallet,
+        ledgerWallet,
+        injectedWallet,
+        safeWallet,
+        argentWallet,
+        rainbowWallet,
+        phantomWallet,
+      ],
+    },
+  ],
+  transports: chains.reduce(
+    (obj: any, chain: any) => ({ ...obj, [chain.id]: http() }),
+    {}
+  ),
+  ssr: true,
+  storage: createStorage({
+    storage: cookieStorage,
+  }),
+});
