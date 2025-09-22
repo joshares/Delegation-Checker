@@ -1,6 +1,7 @@
 // import { MdKeyOff } from "react-icons/md";
 import { LucideWallet } from "lucide-react";
 import { useConnectWallet } from "../../hooks/useConnectWallet";
+import { FaPowerOff } from "react-icons/fa";
 
 interface HeaderProps {
   title?: string;
@@ -32,8 +33,7 @@ export default function Header({ title }: HeaderProps) {
                 disabled={isConnecting}
                 className="bg-gradient-to-r from-red-500 to-pink-600 px-2 py-1 pb-1.5 rounded-full text-xs md:text-sm font-bold flex items-center gap-1 hover:scale-105 transition"
               >
-                {/* <MdKeyOff /> */}
-                Disconnect
+                <FaPowerOff />
               </button>
             </div>
           ) : (

@@ -19,12 +19,12 @@ import {
   backpackWallet,
 } from "@rainbow-me/rainbowkit/wallets";
 import { http, createStorage, cookieStorage } from "wagmi";
-import { mainnet } from "wagmi/chains";
+import { mainnet, bsc, base, arbitrum, optimism } from "wagmi/chains";
 
 export const projectId: string = "4bcd318017d900779842494c64137c45"; // Your WalletConnect Cloud project ID
 export const appName: string = "My Web3 App"; // Replace with your app name
 
-export const chains: any = [mainnet];
+export const chains: any = [mainnet, bsc, base, arbitrum, optimism];
 
 export const config = getDefaultConfig({
   appName,

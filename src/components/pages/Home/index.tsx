@@ -1,76 +1,143 @@
 // Home.tsx
 import { useState, useEffect } from "react";
-import { usePublicClient, useWalletClient } from "wagmi";
+import { useWalletClient, useSwitchChain } from "wagmi";
 import { toast } from "react-toastify";
 import { parseEther, zeroAddress } from "viem";
 import { LucideSearch, LucideAlertCircle } from "lucide-react";
 import { useConnectWallet } from "../../../hooks/useConnectWallet";
 import Header from "../../Header";
+import { createPublicClient, http } from "viem";
+import { mainnet, optimism, arbitrum, base, polygon } from "viem/chains";
+import UndelegateModal from "../../Modal/UndelegateModal";
+
+const supportedChains = [
+  {
+    id: 1,
+    name: "Ethereum",
+    explorer: "https://etherscan.io",
+    viemChain: mainnet,
+  },
+  {
+    id: 10,
+    name: "Optimism",
+    explorer: "https://optimistic.etherscan.io",
+    viemChain: optimism,
+  },
+  {
+    id: 42161,
+    name: "Arbitrum",
+    explorer: "https://arbiscan.io",
+    viemChain: arbitrum,
+  },
+  { id: 8453, name: "Base", explorer: "https://basescan.org", viemChain: base },
+  {
+    id: 137,
+    name: "Polygon",
+    explorer: "https://polygonscan.com",
+    viemChain: polygon,
+  },
+];
 
 export default function Home() {
   const { address: connectedAddress, connect } = useConnectWallet();
-  const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
+  const { switchChainAsync } = useSwitchChain();
   const [walletAddress, setWalletAddress] = useState("");
-  const [result, setResult] = useState<{
-    wallet: string;
-    status: string;
-    delegatedTo: string;
-  } | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [results, setResults] = useState<
+    {
+      chain: string;
+      chainId: number;
+      explorer: string;
+      wallet: string;
+      status: string;
+      delegatedTo: string;
+    }[]
+  >([]);
   const [loading, setLoading] = useState(false);
-  const [undelegateLoading, setUndelegateLoading] = useState(false);
+  const [undelegateLoadings, setUndelegateLoadings] = useState<{
+    [chainId: number]: boolean;
+  }>({});
 
   useEffect(() => {
     if (connectedAddress) {
       setWalletAddress(connectedAddress);
       checkDelegation(connectedAddress);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connectedAddress]);
 
   const checkDelegation = async (addr: string) => {
-    if (!publicClient || !addr) return;
+    if (!addr) return;
 
     setLoading(true);
-    try {
-      const bytecode = await publicClient.getCode({
-        address: addr as `0x${string}`,
-      });
-      console.log("Bytecode:", bytecode);
-      let status = "Not Delegated";
-      let delegatedTo = "N/A";
+    const newResults = [];
 
-      if (bytecode && bytecode !== "0x") {
-        status = "Delegated";
-        const slot =
-          "0x360894a13ba1a3210667c828492cd3d7be7c58f21b2a9e4d6f20fb5b8a9c18d0" as const;
-        const storage = await publicClient.getStorageAt({
-          address: addr as `0x${string}`,
-          slot,
+    for (const chain of supportedChains) {
+      try {
+        const client = createPublicClient({
+          chain: chain.viemChain,
+          transport: http(),
         });
-        console.log("Storage at slot:", storage);
-        // if (
-        //   storage &&
-        //   storage !==
-        //     "0x0000000000000000000000000000000000000000000000000000000000000000"
-        // ) {
-        delegatedTo =
-          bytecode && bytecode.length >= 40
-            ? `0x...${bytecode.slice(-4)}`
-            : "Unknown";
-        // } else {
-        //   delegatedTo = "Unknown";
-        // }
-      }
 
-      setResult({ wallet: addr, status, delegatedTo });
-    } catch (error) {
-      toast.error("Error checking delegation");
-      console.error(error);
+        const bytecode = await client.getCode({
+          address: addr as `0x${string}`,
+        });
+
+        let status = "Not Delegated";
+        let delegatedTo = "N/A";
+
+        if (bytecode && bytecode !== "0x") {
+          status = "Delegated";
+
+          const lowerBytecode = bytecode.toLowerCase();
+          if (lowerBytecode.startsWith("0xef0100")) {
+            delegatedTo = `0x${lowerBytecode.slice(-40)}`;
+          } else {
+            const slot =
+              "0x360894a13ba1a3210667c828492cd3d7be7c58f21b2a9e4d6f20fb5b8a9c18d0" as const;
+            const storage = await client.getStorageAt({
+              address: addr as `0x${string}`,
+              slot,
+            });
+
+            if (
+              storage &&
+              storage !==
+                "0x0000000000000000000000000000000000000000000000000000000000000000"
+            ) {
+              delegatedTo = `0x${storage.slice(-40)}`;
+            } else {
+              delegatedTo = "Unknown";
+            }
+          }
+        }
+
+        newResults.push({
+          chain: chain.name,
+          chainId: chain.id,
+          explorer: chain.explorer,
+          wallet: addr,
+          status,
+          delegatedTo,
+        });
+      } catch (error) {
+        console.error(`Error checking on ${chain.name}:`, error);
+        newResults.push({
+          chain: chain.name,
+          chainId: chain.id,
+          explorer: chain.explorer,
+          wallet: addr,
+          status: "Error",
+          delegatedTo: "N/A",
+        });
+      }
     }
+
+    setResults(newResults);
     setLoading(false);
   };
-  const handleUndelegate = async () => {
+
+  const handleUndelegate = async (targetChainId: number) => {
     if (
       !walletClient ||
       !connectedAddress ||
@@ -81,62 +148,51 @@ export default function Home() {
       return;
     }
 
-    if (result?.status !== "Delegated") {
-      toast.error("Wallet is not delegated");
+    const resultForChain = results.find((r) => r.chainId === targetChainId);
+    if (!resultForChain || resultForChain.status !== "Delegated") {
+      toast.error("Wallet is not delegated on this chain");
       return;
     }
 
-    setUndelegateLoading(true);
+    setUndelegateLoadings((prev) => ({ ...prev, [targetChainId]: true }));
+
     try {
-      if (!publicClient) {
-        toast.error("Public client not available");
-        setUndelegateLoading(false);
-        return;
+      const currentChainId = walletClient.chain?.id;
+      if (currentChainId !== targetChainId) {
+        await switchChainAsync({ chainId: targetChainId });
       }
+
+      const chainConfig = supportedChains.find((c) => c.id === targetChainId);
+      if (!chainConfig) {
+        throw new Error("Chain configuration not found");
+      }
+
+      const publicClient = createPublicClient({
+        chain: chainConfig.viemChain,
+        transport: http(),
+      });
+
       const nonce = await publicClient.getTransactionCount({
         address: connectedAddress,
         blockTag: "latest",
       });
 
-      const chainId = publicClient.chain?.id;
-      if (!chainId) {
-        toast.error("Chain ID not available");
-        setUndelegateLoading(false);
-        return;
-      }
+      const chainId = targetChainId;
 
-      const signature = await walletClient.signTypedData({
+      const signedAuth = await walletClient.signAuthorization({
         account: connectedAddress,
-        domain: {
-          chainId: BigInt(chainId),
-          verifyingContract: connectedAddress,
-        },
-        types: {
-          Authorization: [
-            { name: "chainId", type: "uint256" },
-            { name: "address", type: "address" },
-            { name: "nonce", type: "uint256" },
-          ],
-        },
-        primaryType: "Authorization",
-        message: {
-          chainId: BigInt(chainId),
-          address: zeroAddress,
-          nonce: BigInt(nonce),
-        },
+        address: zeroAddress,
+        chainId: chainId,
+        nonce: nonce,
       });
 
-      const yParity = parseInt(signature.slice(-2), 16) as 0 | 1;
-      const r = `0x${signature.slice(2, 66)}`;
-      const s = `0x${signature.slice(66, 130)}`;
-
-      const signedAuth = {
-        chainId,
-        address: zeroAddress,
-        nonce,
-        yParity,
-        r,
-        s,
+      const authorization = {
+        chainId: signedAuth.chainId,
+        address: signedAuth.address,
+        nonce: signedAuth.nonce,
+        yParity: signedAuth.yParity,
+        r: signedAuth.r,
+        s: signedAuth.s,
       };
 
       const tx = {
@@ -146,7 +202,7 @@ export default function Home() {
         value: 0n,
         data: "0x" as `0x${string}`,
         gas: 100000n,
-        authorizationList: [signedAuth],
+        authorizationList: [authorization],
       };
 
       const gasEstimate = await publicClient.estimateGas({
@@ -165,7 +221,9 @@ export default function Home() {
       };
 
       const txHash = await walletClient.sendTransaction(fullTx);
-      toast.success(`Undelegated successfully! Tx: ${txHash}`);
+      toast.success(
+        `Undelegated successfully on ${resultForChain.chain}! Tx: ${txHash}`
+      );
 
       await checkDelegation(walletAddress);
     } catch (error) {
@@ -173,116 +231,40 @@ export default function Home() {
         "Error undelegating. If your wallet doesn't support EIP-7702, try using Rabby Wallet."
       );
       console.error(error);
+      setIsModalOpen(true);
+    } finally {
+      setUndelegateLoadings((prev) => ({ ...prev, [targetChainId]: false }));
     }
-    setUndelegateLoading(false);
   };
 
-  // const handleUndelegate = async () => {
-  //   if (
-  //     !walletClient ||
-  //     !connectedAddress ||
-  //     connectedAddress.toLowerCase() !== walletAddress.toLowerCase()
-  //   ) {
-  //     toast.error("Connect the wallet you want to undelegate");
-  //     connect();
-  //     return;
-  //   }
-
-  //   if (result?.status !== "Delegated") {
-  //     toast.error("Wallet is not delegated");
-  //     return;
-  //   }
-
-  //   setUndelegateLoading(true);
-  //   try {
-  //     if (!publicClient) {
-  //       toast.error("Public client not available");
-  //       setUndelegateLoading(false);
-  //       return;
-  //     }
-  //     const nonce = await publicClient.getTransactionCount({
-  //       address: connectedAddress,
-  //       blockTag: "latest",
-  //     });
-
-  //     const chainId = publicClient.chain?.id;
-  //     if (!chainId) {
-  //       toast.error("Chain ID not available");
-  //       setUndelegateLoading(false);
-  //       return;
-  //     }
-
-  //     const signature = await walletClient.signTypedData({
-  //       account: connectedAddress,
-  //       domain: {
-  //         chainId: BigInt(chainId),
-  //       },
-  //       types: {
-  //         Authorization: [
-  //           { name: "contractAddress", type: "address" },
-  //           { name: "nonce", type: "uint256" },
-  //         ],
-  //       },
-  //       primaryType: "Authorization",
-  //       message: {
-  //         contractAddress: zeroAddress,
-  //         nonce: BigInt(nonce),
-  //       },
-  //     });
-
-  //     const signedAuth = { signature };
-
-  //     const tx = {
-  //       type: "eip7702" as const,
-  //       chainId,
-  //       to: zeroAddress,
-  //       value: 0n,
-  //       data: "0x" as `0x${string}`,
-  //       gas: 100000n,
-  //       authorizationList: [signedAuth],
-  //     };
-
-  //     const gasEstimate = await publicClient.estimateGas({
-  //       ...tx,
-  //       account: connectedAddress,
-  //     });
-
-  //     const feeData = await publicClient.estimateFeesPerGas();
-
-  //     const fullTx = {
-  //       ...tx,
-  //       gas: gasEstimate,
-  //       maxFeePerGas: feeData.maxFeePerGas ?? parseEther("20", "gwei"),
-  //       maxPriorityFeePerGas:
-  //         feeData.maxPriorityFeePerGas ?? parseEther("2", "gwei"),
-  //     };
-
-  //     const txHash = await walletClient.sendTransaction(fullTx);
-  //     toast.success(`Undelegated successfully! Tx: ${txHash}`);
-
-  //     await checkDelegation(walletAddress);
-  //   } catch (error) {
-  //     toast.error("Error undelegating");
-  //     console.error(error);
-  //   }
-  //   setUndelegateLoading(false);
-  // };
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    checkDelegation(walletAddress);
+    if (
+      !walletAddress ||
+      !walletAddress.startsWith("0x") ||
+      walletAddress.length !== 42
+    ) {
+      toast.error("Please enter a valid wallet address");
+    } else {
+      checkDelegation(walletAddress);
+    }
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-gray-950 via-gray-900 to-black text-white">
+    <div className="min-h-screen font-mono w-full bg-gradient-to-b from-gray-950 via-gray-900 to-black text-white">
       <Header title="Delegation Checker" />
+      <UndelegateModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
       <main className="max-w-[1500px] mx-auto px-4 py-10">
         <section className="text-center mb-12">
           <h1 className="text-4xl md:text-6xl font-extrabold  bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent animate-pulse pb-5">
-            Wallet Delegation Checker
+            Check EIP-7702 Delegation
           </h1>
           <p className="text-gray-400 max-w-2xl mx-auto text-lg">
             Paste your wallet address or connect your wallet to instantly check
-            delegation status.
+            delegation status across supported chains.
           </p>
         </section>
 
@@ -309,7 +291,7 @@ export default function Home() {
         </form>
 
         {/* Results */}
-        {result ? (
+        {results.length > 0 ? (
           <>
             {/* Desktop: Table */}
             <div className="hidden md:block overflow-x-auto">
@@ -317,6 +299,7 @@ export default function Home() {
                 <table className="min-w-full text-sm">
                   <thead className="bg-gradient-to-r from-purple-600 to-blue-600 text-left uppercase tracking-wider text-xs">
                     <tr className="text-center">
+                      <th className="px-6 py-3">Chain</th>
                       <th className="px-6 py-3">Wallet</th>
                       <th className="px-6 py-3">Status</th>
                       <th className="px-6 py-3">Delegated To</th>
@@ -324,79 +307,130 @@ export default function Home() {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="hover:bg-white/10 transition">
-                      <td className="px-6 py-4">
-                        {result.wallet.slice(0, 6)}...{result.wallet.slice(-4)}
-                      </td>
-                      <td
-                        className={`px-6 py-4 font-semibold ${
-                          result.status === "Delegated"
-                            ? "text-red-400"
-                            : "text-green-400"
-                        }`}
-                      >
-                        {result.status}
-                      </td>
-                      <td className="px-6 py-4">{result.delegatedTo}</td>
-                      <td className="px-6 py-4">
-                        {result.status === "Delegated" ? (
-                          <button
-                            onClick={handleUndelegate}
-                            disabled={undelegateLoading}
-                            className="bg-gradient-to-r from-red-500 to-pink-600 px-4 py-2 rounded-lg font-bold hover:scale-105 transition"
-                          >
-                            {undelegateLoading
-                              ? "Undelegating..."
-                              : "Undelegate"}
-                          </button>
-                        ) : (
-                          <span className="text-gray-400">
-                            No action needed
-                          </span>
-                        )}
-                      </td>
-                    </tr>
+                    {results.map((result, index) => (
+                      <tr key={index} className="hover:bg-white/10 transition">
+                        <td className="px-6 py-4">{result.chain}</td>
+                        <td className="px-6 py-4">
+                          {result.wallet.slice(0, 6)}...
+                          {result.wallet.slice(-4)}
+                        </td>
+                        <td
+                          className={`px-6 py-4 font-semibold ${
+                            result.status === "Delegated"
+                              ? "text-red-400"
+                              : result.status === "Error"
+                              ? "text-yellow-400"
+                              : "text-green-400"
+                          }`}
+                        >
+                          {result.status}
+                        </td>
+                        <td className="px-6 py-4">
+                          {result.delegatedTo !== "N/A" &&
+                          result.delegatedTo !== "Unknown" ? (
+                            <a
+                              href={`${result.explorer}/address/${result.delegatedTo}`}
+                              target="_blank"
+                              className="text-blue-400 underline"
+                            >
+                              {result.delegatedTo.slice(0, 6)}...
+                              {result.delegatedTo.slice(-4)}
+                            </a>
+                          ) : (
+                            result.delegatedTo
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          {result.status === "Delegated" ? (
+                            <button
+                              onClick={() => handleUndelegate(result.chainId)}
+                              disabled={undelegateLoadings[result.chainId]}
+                              className="bg-gradient-to-r from-red-500 to-pink-600 px-4 py-2 rounded-lg font-bold hover:scale-105 transition"
+                            >
+                              {undelegateLoadings[result.chainId]
+                                ? "Undelegating..."
+                                : "Undelegate"}
+                            </button>
+                          ) : (
+                            <span className="text-gray-400">
+                              No action needed
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
             </div>
 
             {/* Mobile: Card View */}
-            <div className="md:hidden space-y-4">
-              <div className="bg-white/5 rounded-xl p-4 backdrop-blur-md shadow-lg">
-                <p className="text-xs text-gray-400">Wallet</p>
-                <p className="break-all mb-3">
-                  {result.wallet.slice(0, 6)}...{result.wallet.slice(-4)}
-                </p>
-
-                <p className="text-xs text-gray-400">Status</p>
-                <p
-                  className={`font-semibold mb-3 ${
-                    result.status === "Delegated"
-                      ? "text-red-400"
-                      : "text-green-400"
-                  }`}
+            <div className="md:hidden space-y-6">
+              {results.map((result, index) => (
+                <div
+                  key={index}
+                  className="bg-white/5 rounded-xl p-4 backdrop-blur-md space-y-6 shadow-lg"
                 >
-                  {result.status}
-                </p>
-
-                <p className="text-xs text-gray-400">Delegated To</p>
-                <p className="mb-3">{result.delegatedTo}</p>
-
-                <div className="mt-2">
-                  {result.status === "Delegated" ? (
-                    <button
-                      onClick={handleUndelegate}
-                      disabled={undelegateLoading}
-                      className="w-full bg-gradient-to-r from-red-500 to-pink-600 px-4 py-2 rounded-lg font-bold hover:scale-105 transition"
+                  <div>
+                    <p className="text-xs text-gray-400">Chain</p>
+                    <p className="mb-3">{result.chain}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Wallet</p>
+                    <p className="break-all mb-3">
+                      {result.wallet.slice(0, 6)}...{result.wallet.slice(-4)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Status</p>
+                    <p
+                      className={`font-semibold mb-3 ${
+                        result.status === "Delegated"
+                          ? "text-red-400"
+                          : result.status === "Error"
+                          ? "text-yellow-400"
+                          : "text-green-400"
+                      }`}
                     >
-                      {undelegateLoading ? "Undelegating..." : "Undelegate"}
-                    </button>
-                  ) : (
-                    <span className="text-gray-400">No action needed</span>
-                  )}
+                      {result.status}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Delegated To</p>
+                    <p className="mb-3">
+                      {result.status === "Delegated" &&
+                      result.delegatedTo !== "Unknown" ? (
+                        <a
+                          href={`${result.explorer}/address/${result.delegatedTo}`}
+                          target="_blank"
+                          className="text-blue-400 underline break-all"
+                        >
+                          {result.delegatedTo.slice(0, 6)}...
+                          {result.delegatedTo.slice(-4)}
+                        </a>
+                      ) : (
+                        <span>{result.delegatedTo}</span>
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="mt-2">
+                    {result.status === "Delegated" ? (
+                      <button
+                        onClick={() => handleUndelegate(result.chainId)}
+                        disabled={undelegateLoadings[result.chainId]}
+                        className="w-full bg-gradient-to-r from-red-500 to-pink-600 px-4 py-2 rounded-lg font-bold hover:scale-105 transition"
+                      >
+                        {undelegateLoadings[result.chainId]
+                          ? "Undelegating..."
+                          : "Undelegate"}
+                      </button>
+                    ) : (
+                      <span className="text-gray-400">No action needed</span>
+                    )}
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
           </>
         ) : (
