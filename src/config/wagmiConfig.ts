@@ -21,8 +21,10 @@ import {
 import { http, createStorage, cookieStorage } from "wagmi";
 import { mainnet, bsc, base, arbitrum, optimism } from "wagmi/chains";
 
-export const projectId: string = "4bcd318017d900779842494c64137c45"; // Your WalletConnect Cloud project ID
-export const appName: string = "My Web3 App"; // Replace with your app name
+export const projectId: string =
+  import.meta.env.VITE_PROJECT_ID ?? "default_project_id";
+
+export const appName: string = "Delegation Checker";
 
 export const chains: any = [mainnet, bsc, base, arbitrum, optimism];
 
@@ -61,7 +63,7 @@ export const config = getDefaultConfig({
     (obj: any, chain: any) => ({ ...obj, [chain.id]: http() }),
     {}
   ),
-  ssr: true,
+  // ssr: false,
   storage: createStorage({
     storage: cookieStorage,
   }),
