@@ -9,6 +9,7 @@ import Header from "../../Header";
 import { createPublicClient, http } from "viem";
 import { mainnet, optimism, arbitrum, base, polygon } from "viem/chains";
 import UndelegateModal from "../../Modal/UndelegateModal";
+import Footer from "../../Footer";
 
 const supportedChains = [
   {
@@ -449,6 +450,7 @@ export default function Home() {
           </div>
         )}
       </main>
+      <Footer />
     </div>
   );
 }
