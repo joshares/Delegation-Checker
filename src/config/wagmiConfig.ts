@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// wagmiConfig.ts
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import {
   metaMaskWallet,
@@ -21,9 +20,8 @@ import {
 import { http, createStorage, cookieStorage } from "wagmi";
 import { mainnet, bsc, base, arbitrum, optimism } from "wagmi/chains";
 
-// export const projectId: string =
-//   import.meta.env.VITE_PROJECT_ID ?? "default_project_id";
-const projectId = "4bcd318017d900779842494c64137c45";
+export const projectId: string =
+  import.meta.env.VITE_PROJECT_ID ?? "default_project_id";
 export const appName: string = "Delegation Checker"; // Replace with your app name
 
 export const chains: any = [mainnet, bsc, base, arbitrum, optimism];

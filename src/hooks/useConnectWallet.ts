@@ -30,7 +30,6 @@ export function useConnectWallet(): ConnectWalletResult {
     userInitiated.current = false;
   }, [disconnect]);
 
-  // Only show connecting state if user clicked connect
   const isConnecting = userInitiated.current && wagmiIsConnecting;
 
   return {
