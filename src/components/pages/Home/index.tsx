@@ -257,12 +257,12 @@ export default function Home() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />
-      <main className="max-w-[1500px] mx-auto px-4 py-10">
-        <section className="text-center mb-12">
-          <h1 className="text-4xl md:text-6xl font-extrabold  bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent animate-pulse pb-5">
+      <main className="max-w-[1500px]  mx-auto px-4 py-10">
+        <section className="text-center mb-12 space-y-3">
+          <h1 className="text-xl md:text-4xl lg:text-6xl font-extrabold  bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent animate-pulse pb-5">
             Check EIP-7702 Delegation
           </h1>
-          <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+          <p className="text-gray-400 max-w-2xl mx-auto text-xs sm:text-sm md:text-lg">
             Paste your wallet address or connect your wallet to instantly check
             delegation status across supported chains.
           </p>
@@ -271,7 +271,7 @@ export default function Home() {
         {/* Search form */}
         <form
           onSubmit={handleSearch}
-          className="flex flex-col md:flex-row gap-4 mb-12 justify-center"
+          className="flex flex-col md:flex-row gap-4 mb-12 justify-center  md:px-4"
         >
           <input
             type="text"
@@ -294,7 +294,7 @@ export default function Home() {
         {results.length > 0 ? (
           <>
             {/* Desktop: Table */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto md:px-4">
               <div className="bg-white/5 rounded-2xl shadow-lg overflow-hidden backdrop-blur-md">
                 <table className="min-w-full text-sm">
                   <thead className="bg-gradient-to-r from-purple-600 to-blue-600 text-left uppercase tracking-wider text-xs">
@@ -435,8 +435,15 @@ export default function Home() {
           </>
         ) : (
           <div className="text-center text-gray-400 flex flex-col items-center mt-12">
-            <LucideAlertCircle size={56} className="mb-4 text-pink-500" />
-            <p className="text-lg">
+            <LucideAlertCircle
+              size={56}
+              className="mb-4 text-pink-500 hidden md:block"
+            />
+            <LucideAlertCircle
+              size={30}
+              className="mb-4 text-pink-500 md:hidden"
+            />
+            <p className="md:first-line:text-lg text-sm">
               Paste an address and check, or connect your wallet to auto-load.
             </p>
           </div>

@@ -12,7 +12,7 @@ export default function Header({ title }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-black/40 border-b border-white/10">
-      <div className="container  mx-auto flex items-center justify-between py-4 px-8 md:px-10">
+      <div className="mx-auto flex items-center justify-between py-4 px-4 md:px-8 max-w-[1500px]">
         {/* Left: Title */}
         <p className="hidden uppercase md:block text-lg md:text-2xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
           {title ? `${title}` : "Delegation Checker"}
@@ -40,7 +40,7 @@ export default function Header({ title }: HeaderProps) {
             <button
               onClick={connect}
               disabled={isConnecting}
-              className="bg-gradient-to-r from-blue-500 to-purple-600 px-5 py-2 rounded-full font-semibold text-sm hover:scale-105 transition flex items-center gap-2"
+              className="bg-gradient-to-r from-blue-500 to-purple-600 md:px-5 md:py-2 rounded-full font-semibold md:text-sm hover:scale-105 transition flex items-center gap-2 px-3 py-1 text-xs"
             >
               <LucideWallet size={16} />
               {isConnecting ? "Connecting..." : "Connect Wallet"}
