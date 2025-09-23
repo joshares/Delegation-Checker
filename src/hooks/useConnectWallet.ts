@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useAccount, useDisconnect } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 
@@ -11,27 +11,27 @@ interface ConnectWalletResult {
 }
 
 export function useConnectWallet(): ConnectWalletResult {
-  const {
-    address,
-    isConnecting: wagmiIsConnecting,
-    isReconnecting,
-  } = useAccount();
+  const { address, isConnecting: wagmiIsConnecting } = useAccount();
   const { disconnect } = useDisconnect();
   const { openConnectModal } = useConnectModal();
 
-  const error = null; // Simplify, add if needed
+  const error = null;
+
+  // Track if user actually clicked "connect"
+  const userInitiated = useRef(false);
 
   const connectWallet = useCallback(() => {
-    if (openConnectModal) {
-      openConnectModal();
-    }
+    userInitiated.current = true; // mark intent
+    if (openConnectModal) openConnectModal();
   }, [openConnectModal]);
 
   const disconnectWallet = useCallback(() => {
     disconnect();
+    userInitiated.current = false;
   }, [disconnect]);
 
-  const isConnecting = wagmiIsConnecting || isReconnecting;
+  // Only show connecting state if user clicked connect
+  const isConnecting = userInitiated.current && wagmiIsConnecting;
 
   return {
     address,
