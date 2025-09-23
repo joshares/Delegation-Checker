@@ -6,6 +6,7 @@ import { config } from "./config/wagmiConfig"; // Adjust path if needed
 import type { ReactNode } from "react";
 import { ToastContainer, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { Analytics } from "@vercel/analytics/next";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ export function Providers({ children }: ProvidersProps) {
             theme="dark"
             transition={Bounce}
           />
+          <Analytics />
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
