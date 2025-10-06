@@ -260,7 +260,7 @@ export default function Home() {
       />
       <main className="max-w-[1500px]  mx-auto px-4 py-10">
         <section className="text-center mb-12 space-y-3">
-          <h1 className="text-xl md:text-4xl lg:text-6xl font-extrabold  bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent animate-pulse pb-5">
+          <h1 className="text-xl md:text-4xl lg:text-6xl font-extrabold  text-white animate-pulse pb-5">
             Check EIP-7702 Delegation
           </h1>
           <p className="text-gray-400 max-w-2xl mx-auto text-xs sm:text-sm md:text-lg">
@@ -284,7 +284,7 @@ export default function Home() {
           <button
             type="submit"
             disabled={loading}
-            className="bg-gradient-to-r from-pink-500 to-purple-600 px-8 py-3 rounded-xl font-semibold hover:scale-105 transition-all flex items-center justify-center gap-2"
+            className="bg-white text-black px-8 py-3 rounded-xl font-semibold hover:scale-105 transition-all flex items-center justify-center gap-2"
           >
             <LucideSearch size={18} />
             {loading ? "Checking..." : "Check"}
@@ -298,7 +298,7 @@ export default function Home() {
             <div className="hidden md:block overflow-x-auto md:px-4">
               <div className="bg-white/5 rounded-2xl shadow-lg overflow-hidden backdrop-blur-md">
                 <table className="min-w-full text-sm">
-                  <thead className="bg-gradient-to-r from-purple-600 to-blue-600 text-left uppercase tracking-wider text-xs">
+                  <thead className="bg-white text-black text-left uppercase tracking-wider text-xs">
                     <tr className="text-center">
                       <th className="px-6 py-3">Chain</th>
                       <th className="px-6 py-3">Wallet</th>
@@ -346,7 +346,7 @@ export default function Home() {
                             <button
                               onClick={() => handleUndelegate(result.chainId)}
                               disabled={undelegateLoadings[result.chainId]}
-                              className="bg-gradient-to-r from-red-500 to-pink-600 px-4 py-2 rounded-lg font-bold hover:scale-105 transition"
+                              className="bg-black px-4 py-2 rounded-lg font-bold hover:scale-105 transition"
                             >
                               {undelegateLoadings[result.chainId]
                                 ? "Undelegating..."

@@ -8,7 +8,7 @@ const Footer = () => {
           For inquiries or support, please contact:{" "}
           <a
             href="mailto:Joshares9991@gmail.com"
-            className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-400 hover:from-pink-400 hover:to-purple-300 transition-all duration-300"
+            className="font-semibold text-transparent bg-clip-text bg-white hover:bg-blue-500 transition-all duration-300"
           >
             Joshares9991@gmail.com
           </a>

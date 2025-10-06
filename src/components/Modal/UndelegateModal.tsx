@@ -17,7 +17,7 @@ const UndelegateModal: React.FC<UndelegateModalProps> = ({
       <div className="relative w-full max-w-lg rounded-2xl bg-gray-900 border border-gray-700 shadow-xl overflow-hidden">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="md:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600">
+            <h2 className="md:text-xl font-bold text-white">
               How to Undelegate using Rabby Wallet
             </h2>
             <button
